@@ -8,7 +8,7 @@ import axios from 'axios';
 // ⚠️ For real device use your PC's local IP e.g. http://192.168.1.5:5000
 // ⚠️ For production use your deployed server URL
 
-const BASE_URL = 'http://10.0.2.2:5000/api'; // Android Emulator default
+const BASE_URL = 'http://192.168.1.12:5000/api'; // Android Emulator default
 
 const api = axios.create({
   baseURL: BASE_URL,
