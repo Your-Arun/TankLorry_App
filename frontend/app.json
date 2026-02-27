@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Tank Lorry Smart Manager",
+    "name": "Tank Lorry App",
     "slug": "tank-lorry-smart-manager",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,7 +11,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.yourcompany.tanklorrymanager"
@@ -25,6 +27,11 @@
       "versionCode": 1,
       "minSdkVersion": 21,
       "targetSdkVersion": 34
+    },
+    "extra": {
+      "eas": {
+        "projectId": "c4a950f9-bb7b-4955-9643-9a1aef9b6977"
+      }
     }
   }
 }
