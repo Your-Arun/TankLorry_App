@@ -9,6 +9,7 @@
     "build:android": "eas build --platform android --profile preview"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/bottom-tabs": "^6.5.20",
     "@react-navigation/native": "^6.1.17",
     "axios": "^1.7.2",

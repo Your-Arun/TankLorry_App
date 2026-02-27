@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Tank Lorry App",
-    "slug": "tank-lorry-smart",
+    "name": "Tank Lorry Smart Manager",
+    "slug": "tank-lorry-smart-manager",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

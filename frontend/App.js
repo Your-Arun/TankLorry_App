@@ -1,43 +1,71 @@
-// frontend/App.js
 import React from 'react';
-import { Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { StatusBar } from 'expo-status-bar';
+import { Text, StatusBar } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppProvider } from './context/AppContext';
+
 import DashboardScreen from './screens/DashboardScreen';
 import DailyEntryScreen from './screens/DailyEntryScreen';
 import HistoryScreen from './screens/HistoryScreen';
+import SettingsScreen from './screens/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
 
-const tabIcon = (name, focused) => {
-  const icons = { Dashboard: focused ? '🏠' : '🏡', Entry: focused ? '✏️' : '📝', History: focused ? '📚' : '📖' };
-  return <Text style={{ fontSize: 20 }}>{icons[name]}</Text>;
-};
-
 export default function App() {
   return (
-    <AppProvider>
-      <NavigationContainer>
-        <StatusBar style="dark" />
-        <Tab.Navigator
-          screenOptions={({ route }) => ({
-            tabBarIcon: ({ focused }) => tabIcon(route.name, focused),
-            tabBarActiveTintColor: '#3B82F6',
-            tabBarInactiveTintColor: '#9CA3AF',
-            tabBarStyle: { borderTopColor: '#F3F4F6', backgroundColor: '#fff', paddingBottom: 6, paddingTop: 4, height: 60 },
-            tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
-            headerStyle: { backgroundColor: '#fff', borderBottomColor: '#F3F4F6', borderBottomWidth: 1, elevation: 0, shadowColor: 'transparent' },
-            headerTintColor: '#111827',
-            headerTitleStyle: { fontWeight: '800', fontSize: 18 },
-          })}
-        >
-          <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ headerTitle: '🛢️ Tank Manager' }} />
-          <Tab.Screen name="Entry" component={DailyEntryScreen} options={{ title: 'Daily Entry', headerTitle: '📝 Daily Entry' }} />
-          <Tab.Screen name="History" component={HistoryScreen} options={{ headerTitle: '📚 History' }} />
-        </Tab.Navigator>
-      </NavigationContainer>
-    </AppProvider>
+    <SafeAreaProvider>
+      <AppProvider>
+        <NavigationContainer>
+          <StatusBar
+            barStyle="dark-content"
+            backgroundColor="#ffffff"
+            translucent={false}
+          />
+
+          <Tab.Navigator
+            screenOptions={({ route }) => ({
+              headerShown: false,   // ✅ HEADER TITLE REMOVE
+
+              tabBarIcon: ({ focused }) => {
+                const icons = {
+                  Dashboard: '🏠',
+                  'Daily Entry': '✏️',
+                  History: '📋',
+                  Settings: '⚙️',
+                };
+
+                return (
+                  <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.5 }}>
+                    {icons[route.name]}
+                  </Text>
+                );
+              },
+
+              tabBarActiveTintColor: '#3B82F6',
+              tabBarInactiveTintColor: '#9CA3AF',
+
+              tabBarStyle: {
+                paddingBottom: 8,
+                paddingTop: 6,
+                height: 60,
+                borderTopWidth: 1,
+                borderTopColor: '#F3F4F6',
+              },
+
+              tabBarLabelStyle: {
+                fontSize: 11,
+                fontWeight: '700',
+              },
+            })}
+          >
+            <Tab.Screen name="Dashboard" component={DashboardScreen} />
+            <Tab.Screen name="Daily Entry" component={DailyEntryScreen} />
+            <Tab.Screen name="History" component={HistoryScreen} />
+            <Tab.Screen name="Settings" component={SettingsScreen} />
+          </Tab.Navigator>
+        </NavigationContainer>
+      </AppProvider>
+    </SafeAreaProvider>
   );
 }

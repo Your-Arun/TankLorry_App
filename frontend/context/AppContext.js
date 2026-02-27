@@ -1,85 +1,69 @@
-// frontend/context/AppContext.js
-// Global state management - fetches data from Node.js REST API
-
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { saveStockEntry, getLatestEntry, getHistory as fetchHistoryApi } from '../api/stockApi';
+import { loadSaleRates } from '../utils/decisionEngine';
 
 const AppContext = createContext(null);
 
 export const AppProvider = ({ children }) => {
-  const [latestEntry, setLatestEntry] = useState(null);
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [latestEntry,    setLatestEntry]    = useState(null);
+  const [history,        setHistory]        = useState([]);
+  const [loading,        setLoading]        = useState(true);
   const [historyLoading, setHistoryLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error,          setError]          = useState(null);
+  const [ratesLoaded,    setRatesLoaded]    = useState(false);
 
-  // Load latest entry on mount
   useEffect(() => {
-    loadLatest();
+    // Load user's custom sale rates first, then load latest entry
+    loadSaleRates().then(() => {
+      setRatesLoaded(true);
+      loadLatest();
+    });
   }, []);
 
   const loadLatest = async () => {
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     try {
       const res = await getLatestEntry();
       setLatestEntry(res.data);
     } catch (err) {
-      // 404 = no entries yet, that's okay
-      if (err?.response?.status !== 404) {
-        setError('Cannot connect to server. Make sure the backend is running.');
-      }
+      if (err?.response?.status !== 404)
+        setError('Server se connect nahi ho raha. Backend chalu hai?');
       setLatestEntry(null);
     } finally {
       setLoading(false);
     }
   };
 
-  /**
-   * Save a new daily stock entry via API
-   */
-  const saveEntry = useCallback(async (tank1, tank2, avgSale) => {
+  const refreshLatest = useCallback(async () => {
+    // Also reload sale rates in case user changed them in Settings
+    await loadSaleRates();
+    await loadLatest();
+  }, []);
+
+  const saveEntry = useCallback(async (tank1, tank2) => {
     try {
-      const res = await saveStockEntry(tank1, tank2, avgSale);
-      // Update latest entry immediately from API response
+      const res = await saveStockEntry(tank1, tank2);
       setLatestEntry(res.data);
       return { success: true };
     } catch (err) {
-      return {
-        success: false,
-        error: err?.response?.data?.message || err.message || 'Server error',
-      };
+      return { success: false, error: err?.response?.data?.message || err.message || 'Server error' };
     }
   }, []);
 
-  /**
-   * Fetch history from API
-   */
   const fetchHistory = useCallback(async (page = 1, limit = 20) => {
     setHistoryLoading(true);
     try {
       const res = await fetchHistoryApi(page, limit);
       setHistory(res.data);
-    } catch (err) {
-      setError('Failed to load history.');
-    } finally {
-      setHistoryLoading(false);
-    }
+    } catch { setError('History load nahi hui.'); }
+    finally { setHistoryLoading(false); }
   }, []);
 
   return (
-    <AppContext.Provider
-      value={{
-        latestEntry,
-        history,
-        loading,
-        historyLoading,
-        error,
-        saveEntry,
-        fetchHistory,
-        refreshLatest: loadLatest,
-      }}
-    >
+    <AppContext.Provider value={{
+      latestEntry, history, loading, historyLoading, error,
+      saveEntry, fetchHistory, refreshLatest, ratesLoaded,
+    }}>
       {children}
     </AppContext.Provider>
   );
@@ -87,6 +71,6 @@ export const AppProvider = ({ children }) => {
 
 export const useApp = () => {
   const ctx = useContext(AppContext);
-  if (!ctx) throw new Error('useApp must be used inside AppProvider');
+  if (!ctx) throw new Error('useApp must be inside AppProvider');
   return ctx;
 };
