@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://192.168.1.12:5000/api';
+const BASE_URL = 'https://tanklorry-app.onrender.com/api';
 
 const api = axios.create({
   baseURL: BASE_URL,
