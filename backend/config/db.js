@@ -1,6 +1,3 @@
-// backend/config/db.js
-// MongoDB connection using Mongoose
-
 const mongoose = require('mongoose');
 
 const connectDB = async () => {
@@ -9,10 +6,10 @@ const connectDB = async () => {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+    console.log(`✅ MongoDB Connected`);
   } catch (error) {
     console.error(`❌ MongoDB Connection Error: ${error.message}`);
-    process.exit(1); // Exit process if DB fails to connect
+    process.exit(1);
   }
 };
 
