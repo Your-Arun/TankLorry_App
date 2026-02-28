@@ -1,8 +1,11 @@
 import api from './apiConfig';
 
-// Only tank1 and tank2 needed — avgSale is auto-set from day of week
-export const saveStockEntry = async (tank1, tank2) => {
-  const response = await api.post('/stock', { tank1, tank2 });
+export const saveStockEntry = async (tank1, tank2, entryDate) => {
+  const response = await api.post('/stock', {
+    tank1,
+    tank2,
+    entryDate: entryDate ? entryDate.toISOString() : new Date().toISOString(),
+  });
   return response.data;
 };
 

@@ -128,3 +128,74 @@ export const getTankStatusColor = (level, capacity, minSafe) => {
 
 export const getFillPercentage = (level, capacity) =>
   Math.min(Math.max((level / capacity) * 100, 0), 100);
+
+/**
+ * Same as getIndentDecision but accepts a custom entryDate
+ * entryDate = the night whose stock is being entered
+ * Decision is for the NEXT day after entryDate
+ */
+export const getIndentDecisionForDate = (tank1, tank2, entryDate) => {
+  const tonightStock = tank1 + tank2;
+
+  // Next day after the entry date
+  const nextDay     = new Date(entryDate.getTime() + 86400000);
+  const tmrDayIdx   = nextDay.getDay();
+  const tmrName     = DAY_NAMES[tmrDayIdx];
+  const tmrSaleRate = getSaleRate(tmrDayIdx);
+  const isSun = tmrDayIdx === 0;
+  const isSat = tmrDayIdx === 6;
+  const isMon = tmrDayIdx === 1;
+
+  const tmrDaysLeft = tmrSaleRate > 0 ? tonightStock / tmrSaleRate : 0;
+  const ratio       = tonightStock > 0 ? tank1 / tonightStock : 0.74;
+  const tmrTank1    = tonightStock * ratio;
+  const tmrTank2    = tonightStock * (1 - ratio);
+
+  const decant12 = calcDecant(tonightStock, 12000, tmrSaleRate);
+  const decant14 = calcDecant(tonightStock, 14000, tmrSaleRate);
+  const best     = pickBestLocal(tonightStock, tmrSaleRate);
+
+  const base = {
+    tonightStock: Math.round(tonightStock),
+    tomorrowStock: Math.round(tonightStock),
+    tomorrowDay: tmrName,
+    tomorrowSaleRate: tmrSaleRate,
+    tmrDaysLeft: parseFloat(tmrDaysLeft.toFixed(2)),
+    stockAfterTmrDay: Math.max(0, Math.round(tonightStock - tmrSaleRate)),
+    decant12, decant14,
+    entryDate,
+    nextDay,
+  };
+
+  const isEmergency = tmrTank1 < TANK1_MIN_SAFE || tmrTank2 < TANK2_MIN_SAFE;
+  if (isEmergency) {
+    const lowTank  = tmrTank1 < TANK1_MIN_SAFE ? 'Tank 1' : 'Tank 2';
+    const lowLevel = Math.round(tmrTank1 < TANK1_MIN_SAFE ? tmrTank1 : tmrTank2);
+    const safe     = tmrTank1 < TANK1_MIN_SAFE ? TANK1_MIN_SAFE : TANK2_MIN_SAFE;
+    const lbl      = best ? best.label : 'Max';
+    if (isSun) return { ...base, needIndent: true, isEmergency: true, indentDecision: 'EMERGENCY', suggestedIndent: lbl + ' (Emergency)', urgency: 'critical', reason: '🚨 CRITICAL: ' + lowTank + ' ~' + lowLevel.toLocaleString() + 'L hoga. Sunday depot band — abhi emergency supply arrange karo!' };
+    return { ...base, needIndent: true, isEmergency: true, indentDecision: 'EMERGENCY', suggestedIndent: lbl + ' (Emergency)', urgency: 'critical', reason: '🚨 Emergency! ' + lowTank + ' sirf ~' + lowLevel.toLocaleString() + 'L (safe: ' + safe.toLocaleString() + 'L). ' + tmrName + ' ko ' + lbl + ' ZAROOR lo.' };
+  }
+  if (isSun) return { ...base, needIndent: false, isEmergency: false, indentDecision: 'NO', suggestedIndent: 'No Indent', urgency: 'none', reason: '✅ ' + tmrName + ' — depot band. Stock ' + tonightStock.toLocaleString() + 'L. Monday (' + getSaleRate(1).toLocaleString() + 'L/day) pe ' + (tonightStock/getSaleRate(1)).toFixed(1) + ' din.' };
+  if (isSat) {
+    const need2 = tmrSaleRate + getSaleRate(0);
+    if (tonightStock < need2 && best) return { ...base, needIndent: true, isEmergency: false, indentDecision: 'YES', suggestedIndent: best.label, urgency: 'medium', reason: '📅 ' + tmrName + '. Sat+Sun = ' + need2.toLocaleString() + 'L chahiye. Stock ' + tonightStock.toLocaleString() + 'L. ' + best.label + ' lo.' };
+    return { ...base, needIndent: false, isEmergency: false, indentDecision: 'NO', suggestedIndent: 'No Indent', urgency: 'none', reason: '✅ ' + tmrName + '. Stock ' + tonightStock.toLocaleString() + 'L — Sat+Sun kaafi. Indent nahi.' };
+  }
+  if (isMon) {
+    if (tmrDaysLeft < 2 && best) return { ...base, needIndent: true, isEmergency: false, indentDecision: 'YES', suggestedIndent: best.label, urgency: 'high', reason: '⚠️ ' + tmrName + ' (' + tmrSaleRate.toLocaleString() + 'L/day). Stock ' + tonightStock.toLocaleString() + 'L = sirf ' + tmrDaysLeft.toFixed(1) + ' din. ' + best.label + ' ZAROOR lo.' };
+    if (tmrDaysLeft < 4 && best) return { ...base, needIndent: true, isEmergency: false, indentDecision: 'YES', suggestedIndent: best.label, urgency: 'medium', reason: '📋 ' + tmrName + ' (' + tmrSaleRate.toLocaleString() + 'L/day). ' + tmrDaysLeft.toFixed(1) + ' din. ' + best.label + ' lena theek hai.' };
+  }
+  if (tmrDaysLeft < 1.5 && best) return { ...base, needIndent: true, isEmergency: false, indentDecision: 'YES', suggestedIndent: best.label, urgency: 'high', reason: '⚠️ Bahut kam! ' + tmrName + ' (' + tmrSaleRate.toLocaleString() + 'L/day). Stock ' + tonightStock.toLocaleString() + 'L = ' + tmrDaysLeft.toFixed(1) + ' din. ' + best.label + ' ZAROOR lo.' };
+  if (tmrDaysLeft < 3 && best) return { ...base, needIndent: true, isEmergency: false, indentDecision: 'YES', suggestedIndent: best.label, urgency: 'medium', reason: '📋 ' + tmrName + ' (' + tmrSaleRate.toLocaleString() + 'L/day). Stock ' + tonightStock.toLocaleString() + 'L = ' + tmrDaysLeft.toFixed(1) + ' din. ' + best.label + ' lo.' };
+  return { ...base, needIndent: false, isEmergency: false, indentDecision: 'NO', suggestedIndent: 'No Indent', urgency: 'none', reason: '✅ Stock theek. ' + tmrName + ' (' + tmrSaleRate.toLocaleString() + 'L/day) pe ' + tmrDaysLeft.toFixed(1) + ' din. Indent nahi.' };
+};
+
+// Internal helper (same as pickBest but not exported to avoid duplicate)
+const pickBestLocal = (tonightStock, tmrSaleRate) => {
+  const d14 = calcDecant(tonightStock, 14000, tmrSaleRate);
+  const d12 = calcDecant(tonightStock, 12000, tmrSaleRate);
+  if (d14) return { label: '14 KL', decant: d14 };
+  if (d12) return { label: '12 KL', decant: d12 };
+  return null;
+};

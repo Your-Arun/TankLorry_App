@@ -10,14 +10,9 @@ export const AppProvider = ({ children }) => {
   const [loading,        setLoading]        = useState(true);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [error,          setError]          = useState(null);
-  const [ratesLoaded,    setRatesLoaded]    = useState(false);
 
   useEffect(() => {
-    // Load user's custom sale rates first, then load latest entry
-    loadSaleRates().then(() => {
-      setRatesLoaded(true);
-      loadLatest();
-    });
+    loadSaleRates().then(() => loadLatest());
   }, []);
 
   const loadLatest = async () => {
@@ -29,20 +24,18 @@ export const AppProvider = ({ children }) => {
       if (err?.response?.status !== 404)
         setError('Server se connect nahi ho raha. Backend chalu hai?');
       setLatestEntry(null);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   const refreshLatest = useCallback(async () => {
-    // Also reload sale rates in case user changed them in Settings
     await loadSaleRates();
     await loadLatest();
   }, []);
 
-  const saveEntry = useCallback(async (tank1, tank2) => {
+  // entryDate = the night being recorded (next day = entryDate + 1)
+  const saveEntry = useCallback(async (tank1, tank2, entryDate) => {
     try {
-      const res = await saveStockEntry(tank1, tank2);
+      const res = await saveStockEntry(tank1, tank2, entryDate || new Date());
       setLatestEntry(res.data);
       return { success: true };
     } catch (err) {
@@ -60,10 +53,7 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   return (
-    <AppContext.Provider value={{
-      latestEntry, history, loading, historyLoading, error,
-      saveEntry, fetchHistory, refreshLatest, ratesLoaded,
-    }}>
+    <AppContext.Provider value={{ latestEntry, history, loading, historyLoading, error, saveEntry, fetchHistory, refreshLatest }}>
       {children}
     </AppContext.Provider>
   );

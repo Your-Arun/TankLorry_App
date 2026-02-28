@@ -7,6 +7,7 @@ const DecantSchema = new mongoose.Schema({
 }, { _id: false });
 
 const StockEntrySchema = new mongoose.Schema({
+  entryDate:       { type: Date, default: Date.now },
   tank1:           { type: Number, required: true, min: 0, max: 14500 },
   tank2:           { type: Number, required: true, min: 0, max: 5000 },
   avgSale:         { type: Number, default: 0 },  // auto-set from day
