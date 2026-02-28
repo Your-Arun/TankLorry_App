@@ -6,7 +6,8 @@ import {
 } from 'react-native';
 import { useApp } from '../context/AppContext';
 import {
-  getIndentDecision,
+  getIndentDecisionForDate,
+  loadSaleRates,
   TANK1_CAPACITY, TANK2_CAPACITY, TOTAL_CAPACITY,
   TANK1_MIN_SAFE, TANK2_MIN_SAFE,
 } from '../utils/decisionEngine';
@@ -22,19 +23,25 @@ const formatDate = (d) => {
   });
 };
 
-const DashboardScreen = () => {
+const DashboardScreen = ({ navigation }) => {
   const { latestEntry, loading, error, refreshLatest } = useApp();
   const [refreshing, setRefreshing] = React.useState(false);
 
   const onRefresh = async () => {
     setRefreshing(true);
+    await loadSaleRates();   // reload in case settings changed
     await refreshLatest();
     setRefreshing(false);
   };
 
-  // Re-run engine every render — keeps "tomorrow" always current
+  // Use saved entryDate from entry — so decision matches what user entered
+  // Falls back to new Date() if entryDate not saved (old entries)
   const decision = latestEntry
-    ? getIndentDecision(latestEntry.tank1, latestEntry.tank2)
+    ? getIndentDecisionForDate(
+        latestEntry.tank1,
+        latestEntry.tank2,
+        latestEntry.entryDate ? new Date(latestEntry.entryDate) : new Date()
+      )
     : null;
 
   if (loading) {
@@ -45,6 +52,7 @@ const DashboardScreen = () => {
       </View>
     );
   }
+
   if (error) {
     return (
       <View style={s.center}>
@@ -66,18 +74,20 @@ const DashboardScreen = () => {
       <View style={s.header}>
         <Text style={s.headerTitle}>🛢️ Tank Smart Manager</Text>
         {latestEntry && (
-          <Text style={s.headerDate}>Aaj raat ki entry · {formatDate(latestEntry.createdAt)}</Text>
+          <Text style={s.headerDate}>
+            Entry: {formatDate(latestEntry.entryDate || latestEntry.createdAt)}
+          </Text>
         )}
       </View>
 
       {latestEntry ? (
         <>
-          {/* ══ MAIN DECISION — ye sabse pehle ════════════ */}
+          {/* ══ MAIN DECISION ══════════════════════════════ */}
           <IndentDecisionCard decision={decision} />
 
           {/* ══ TANK LEVELS ════════════════════════════════ */}
           <View style={s.card}>
-            <Text style={s.sectionTitle}>Tank Levels (Aaj Raat)</Text>
+            <Text style={s.sectionTitle}>Tank Levels</Text>
             <View style={s.tanksRow}>
               <TankGauge label="Tank 1" level={latestEntry.tank1}
                 capacity={TANK1_CAPACITY} minSafe={TANK1_MIN_SAFE} />
@@ -97,17 +107,20 @@ const DashboardScreen = () => {
             />
             <View style={{ width: 8 }} />
             <StatCard
-              label="Kal Stock"
-              value={('~' + (decision?.tomorrowStock ?? 0).toLocaleString())}
+              label={decision?.tomorrowDay + ' Stock'}
+              value={'~' + (decision?.tomorrowStock ?? 0).toLocaleString()}
               unit="Litres"
-              color={decision?.tmrDaysLeft < 1.5 ? '#EF4444'
-                   : decision?.tmrDaysLeft < 3   ? '#F97316' : '#22C55E'}
+              color={
+                decision?.tmrDaysLeft < 1.5 ? '#EF4444'
+              : decision?.tmrDaysLeft < 3   ? '#F97316'
+              : '#22C55E'
+              }
               icon="🌅"
             />
             <View style={{ width: 8 }} />
             <StatCard
-              label="Exp. Sale"
-              value={latestEntry.avgSale.toLocaleString()}
+              label="Sale Rate"
+              value={(decision?.tomorrowSaleRate ?? 0).toLocaleString()}
               unit="L/day"
               color="#8B5CF6" icon="📊"
             />
@@ -128,8 +141,7 @@ const DashboardScreen = () => {
           <Text style={s.emptyTitle}>Koi data nahi</Text>
           <Text style={s.emptySub}>
             "Daily Entry" tab mein aaj raat ka{'\n'}
-            tank level aur kal ki expected sale{'\n'}
-            enter karo.{'\n\n'}
+            tank level enter karo.{'\n\n'}
             App turant batayega:{'\n'}
             <Text style={{ fontWeight: '700', color: '#3B82F6' }}>
               ✅ Indent chahiye ya nahi
